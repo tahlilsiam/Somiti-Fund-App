@@ -21,8 +21,7 @@ export async function listMembers(
 
   let query = supabase
     .from("members")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("*");
 
   if (filters.status && filters.status !== "all") {
     query = query.eq("status", filters.status);
@@ -41,6 +40,11 @@ export async function listMembers(
         .some((field) => field!.toLowerCase().includes(q)),
     );
   }
+
+  // Default sort: by member code (numeric-aware, e.g. SPS-2 before SPS-10).
+  members.sort((a, b) =>
+    a.member_code.localeCompare(b.member_code, undefined, { numeric: true }),
+  );
 
   return members;
 }

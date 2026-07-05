@@ -4,15 +4,19 @@ import { z } from "zod";
 // fields validate cleanly and we store NULL instead of empty strings.
 const optionalText = z
   .string()
-  .trim()
-  .transform((v) => (v === "" ? undefined : v))
-  .optional();
+  .nullish()
+  .transform((v) => {
+    const s = (v ?? "").trim();
+    return s === "" ? undefined : s;
+  });
 
 const optionalEmail = z
   .string()
-  .trim()
-  .transform((v) => (v === "" ? undefined : v))
-  .optional()
+  .nullish()
+  .transform((v) => {
+    const s = (v ?? "").trim();
+    return s === "" ? undefined : s;
+  })
   .refine((v) => v === undefined || z.email().safeParse(v).success, {
     message: "Please enter a valid email address.",
   });

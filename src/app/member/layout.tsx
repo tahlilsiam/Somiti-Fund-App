@@ -1,17 +1,9 @@
-import { AppHeader } from "@/components/app-header";
-import { requireMember } from "@/lib/auth";
+import { MemberShell } from "@/components/layout/member-shell";
 
-export default async function MemberLayout({
+export default function MemberLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireMember();
-
-  return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader area="Member" name={profile.full_name} role={profile.role} />
-      {children}
-    </div>
-  );
+  return <MemberShell>{children}</MemberShell>;
 }

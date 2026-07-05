@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormErrorBanner } from "@/components/form-error-banner";
+import { FormSection } from "@/components/form-section";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Select,
   SelectContent,
@@ -63,14 +66,12 @@ export function MemberForm({
 
   return (
     <form action={formAction} className="space-y-8">
+      <FormErrorBanner error={state.error} fieldErrors={state.fieldErrors} />
       {mode === "edit" && initial ? (
         <input type="hidden" name="id" value={initial.id} />
       ) : null}
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Member information
-        </h2>
+      <FormSection title="Member information">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="member_code">Member code *</Label>
@@ -175,12 +176,12 @@ export function MemberForm({
             rows={2}
           />
         </div>
-      </section>
+      </FormSection>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Nominee information (optional)
-        </h2>
+      <FormSection
+        title="Nominee information"
+        description="Optional — leave blank if there is no nominee."
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="nominee_name">Nominee name</Label>
@@ -215,16 +216,12 @@ export function MemberForm({
             />
           </div>
         </div>
-      </section>
+      </FormSection>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending
-            ? "Saving…"
-            : mode === "new"
-              ? "Create member"
-              : "Save changes"}
-        </Button>
+        <SubmitButton>
+          {mode === "new" ? "Create member" : "Save changes"}
+        </SubmitButton>
         <Button
           type="button"
           variant="outline"

@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { listMembers } from "@/lib/members/queries";
 import type { MemberStatus } from "@/lib/members/types";
 import { MembersToolbar } from "./members-toolbar";
@@ -19,40 +22,30 @@ export default async function MembersPage({
   const hasFilters = Boolean(q) || statusFilter !== "all";
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Members</h1>
-        <p className="text-muted-foreground text-sm">
-          Manage members and their nominees.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
+      <PageHeader title="Members" description="Manage members and their nominees." />
 
       <MembersToolbar />
 
       {members.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-12 text-center">
-          {hasFilters ? (
-            <>
-              <p className="font-medium">No members match your filters.</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Try a different search or status.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="font-medium">No members yet.</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Add your first member to get started.
-              </p>
-              <Link
-                href="/admin/members/new"
-                className={buttonVariants({ className: "mt-4" })}
-              >
+        hasFilters ? (
+          <EmptyState
+            icon={Users}
+            title="No members match your filters"
+            description="Try a different search or status."
+          />
+        ) : (
+          <EmptyState
+            icon={Users}
+            title="No members yet"
+            description="Add your first member to get started."
+            action={
+              <Link href="/admin/members/new" className={buttonVariants()}>
                 + Add member
               </Link>
-            </>
-          )}
-        </div>
+            }
+          />
+        )
       ) : (
         <>
           <p className="text-muted-foreground text-sm">
@@ -61,6 +54,6 @@ export default async function MembersPage({
           <MembersTable members={members} />
         </>
       )}
-    </main>
+    </div>
   );
 }

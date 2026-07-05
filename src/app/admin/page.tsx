@@ -1,49 +1,72 @@
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
+import { Users, UserCheck, Wallet, Landmark } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
+import { SectionCard } from "@/components/section-card";
+import { EmptyState } from "@/components/empty-state";
 import { getCurrentSession } from "@/lib/auth";
+import { listMembers } from "@/lib/members/queries";
+import { listAccountsWithBalance } from "@/lib/accounts/queries";
+import { formatAmount } from "@/lib/format";
 
-export default async function AdminHomePage() {
-  const session = await getCurrentSession();
+export default async function AdminDashboardPage() {
+  const [session, members, accounts] = await Promise.all([
+    getCurrentSession(),
+    listMembers(),
+    listAccountsWithBalance(),
+  ]);
+
+  const totalMembers = members.length;
+  const activeMembers = members.filter((m) => m.status === "active").length;
+  const totalAccounts = accounts.length;
+  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 p-8">
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-wide">
-          Admin
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome
-          {session?.profile?.full_name ? `, ${session.profile.full_name}` : ""}
-        </h1>
-        <p className="text-muted-foreground">
-          Manage members now. Payments, ledger, installments and reports come in
-          later phases.
-        </p>
+    <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
+      <PageHeader
+        title={`Welcome${session?.profile?.full_name ? `, ${session.profile.full_name}` : ""}`}
+        description="Overview of Sophnochura Somiti."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total members" value={totalMembers} icon={Users} />
+        <StatCard
+          label="Active members"
+          value={activeMembers}
+          icon={UserCheck}
+        />
+        <StatCard
+          label="Total accounts"
+          value={totalAccounts}
+          icon={Landmark}
+        />
+        <StatCard
+          label="Total balance"
+          value={formatAmount(totalBalance)}
+          icon={Wallet}
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link
-          href="/admin/members"
-          className="rounded-lg border p-5 transition-colors hover:bg-muted"
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SectionCard
+          title="Recent transactions"
+          description="Latest ledger activity."
         >
-          <h2 className="font-semibold">Members</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Add, edit, search and manage members and nominees.
-          </p>
-        </Link>
+          <EmptyState
+            title="Coming soon"
+            description="A recent-transactions feed will appear here in a later phase. For now, view the full ledger under Transactions."
+          />
+        </SectionCard>
 
-        <div className="rounded-lg border border-dashed p-5 opacity-60">
-          <h2 className="font-semibold">Payments &amp; Reports</h2>
-          <p className="text-muted-foreground mt-1 text-sm">Coming in later phases.</p>
-        </div>
+        <SectionCard
+          title="Pending payments"
+          description="Member submissions awaiting review."
+        >
+          <EmptyState
+            title="Not available yet"
+            description="Member payment submissions and approvals arrive in Phase 5."
+          />
+        </SectionCard>
       </div>
-
-      <Link
-        href="/admin/members"
-        className={buttonVariants({ variant: "outline" })}
-      >
-        Go to members
-      </Link>
-    </main>
+    </div>
   );
 }

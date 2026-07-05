@@ -8,12 +8,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
+import { DataTableWrapper } from "@/components/data-table-wrapper";
 import { MemberStatusBadge } from "@/components/member-status-badge";
 import type { Member } from "@/lib/members/types";
 
 export function MembersTable({ members }: { members: Member[] }) {
   return (
-    <div className="rounded-lg border">
+    <DataTableWrapper>
       <Table>
         <TableHeader>
           <TableRow>
@@ -57,6 +58,6 @@ export function MembersTable({ members }: { members: Member[] }) {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </DataTableWrapper>
   );
 }
