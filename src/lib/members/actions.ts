@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logAudit } from "@/lib/audit";
 import { memberFormSchema, statusSchema } from "@/lib/validations/member";
 import type { MemberStatus } from "./types";
 
@@ -187,6 +188,41 @@ export async function updateMember(
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${id}`);
   return { ok: true, memberId: id };
+}
+
+export async function linkMemberProfile(
+  memberId: string,
+  profileId: string | null,
+) {
+  const session = await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("members")
+    .update({ profile_id: profileId })
+    .eq("id", memberId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        ok: false,
+        error: "That login profile is already linked to another member.",
+      };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  await logAudit(supabase, {
+    actorId: session.userId,
+    action: "update",
+    entity: "members",
+    entityId: memberId,
+    details: { profile_id: profileId, field: "link_login_profile" },
+  });
+
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${memberId}`);
+  return { ok: true };
 }
 
 export async function setMemberStatus(id: string, status: MemberStatus) {

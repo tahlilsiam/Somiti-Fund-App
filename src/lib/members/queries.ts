@@ -49,6 +49,60 @@ export async function listMembers(
   return members;
 }
 
+/** Find the member record linked to a login profile (members.profile_id). */
+export async function getMemberByProfileId(
+  profileId: string,
+): Promise<Member | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Member | null) ?? null;
+}
+
+export type LinkableProfile = { id: string; label: string };
+
+/**
+ * Member-role login profiles available to link to a member record. Excludes
+ * profiles already linked to another member (keeps the current member's own
+ * linked profile in the list). Labels use full name and/or email.
+ */
+export async function listLinkableProfiles(
+  currentMemberId?: string,
+): Promise<LinkableProfile[]> {
+  const supabase = createAdminClient();
+
+  const [{ data: profiles }, { data: members }, usersRes] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "member"),
+    supabase.from("members").select("id, profile_id").not("profile_id", "is", null),
+    supabase.auth.admin.listUsers(),
+  ]);
+
+  const linkedElsewhere = new Set(
+    (members ?? [])
+      .filter((m) => m.profile_id && m.id !== currentMemberId)
+      .map((m) => m.profile_id as string),
+  );
+  const emailById = new Map(
+    (usersRes.data?.users ?? []).map((u) => [u.id, u.email ?? ""]),
+  );
+
+  return (profiles ?? [])
+    .filter((p) => !linkedElsewhere.has(p.id as string))
+    .map((p) => {
+      const email = emailById.get(p.id as string) ?? "";
+      const name = (p.full_name as string | null) ?? "";
+      const label =
+        name && email
+          ? `${name} · ${email}`
+          : name || email || (p.id as string).slice(0, 8);
+      return { id: p.id as string, label };
+    });
+}
+
 export async function getMemberWithNominee(
   id: string,
 ): Promise<MemberWithNominee | null> {

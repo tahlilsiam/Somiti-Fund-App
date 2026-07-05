@@ -4,6 +4,7 @@ import {
   Contact,
   Wallet,
   ArrowLeftRight,
+  ClipboardCheck,
   BarChart3,
   Settings,
   UserRound,
@@ -25,6 +26,11 @@ export const adminNav: NavItem[] = [
   { label: "Nominees", href: "/admin/nominees", icon: Contact },
   { label: "Accounts", href: "/admin/accounts", icon: Wallet },
   { label: "Transactions", href: "/admin/transactions", icon: ArrowLeftRight },
+  {
+    label: "Payments",
+    href: "/admin/payment-submissions",
+    icon: ClipboardCheck,
+  },
   { label: "Reports", href: "/admin/reports", icon: BarChart3, soon: true },
   { label: "Settings", href: "/admin/settings", icon: Settings, soon: true },
 ];
@@ -32,6 +38,6 @@ export const adminNav: NavItem[] = [
 export const memberNav: NavItem[] = [
   { label: "Dashboard", href: "/member", icon: LayoutDashboard },
   { label: "My Profile", href: "/member/profile", icon: UserRound, soon: true },
-  { label: "My Payments", href: "/member/payments", icon: CreditCard, soon: true },
+  { label: "My Payments", href: "/member/payments", icon: CreditCard },
   { label: "My Statement", href: "/member/statement", icon: FileText, soon: true },
 ];

@@ -4,8 +4,12 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { MemberStatusBadge } from "@/components/member-status-badge";
-import { getMemberWithNominee } from "@/lib/members/queries";
+import {
+  getMemberWithNominee,
+  listLinkableProfiles,
+} from "@/lib/members/queries";
 import { StatusToggle } from "./status-toggle";
+import { LinkProfileControl } from "./link-profile-control";
 
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
@@ -26,6 +30,8 @@ export default async function MemberDetailPage({
   const { id } = await params;
   const member = await getMemberWithNominee(id);
   if (!member) notFound();
+
+  const linkableProfiles = await listLinkableProfiles(member.id);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
@@ -57,6 +63,17 @@ export default async function MemberDetailPage({
           <Field label="Present address" value={member.present_address} />
           <Field label="Goal" value={member.goal} />
         </dl>
+      </SectionCard>
+
+      <SectionCard
+        title="Login account"
+        description="Link this member to a member-role login so they can submit payments."
+      >
+        <LinkProfileControl
+          memberId={member.id}
+          currentProfileId={member.profile_id}
+          options={linkableProfiles}
+        />
       </SectionCard>
 
       <SectionCard title="Nominee information">
