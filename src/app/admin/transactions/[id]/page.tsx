@@ -15,6 +15,11 @@ import {
 } from "@/lib/transactions/constants";
 import { VoidTransactionDialog } from "../void-transaction-dialog";
 
+const INSTALLMENT_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 function Field({
   label,
   children,
@@ -94,6 +99,13 @@ export default async function TransactionDetailPage({
             </StatusBadge>
           </Field>
           <Field label="Amount">{formatAmount(t.amount)}</Field>
+          {t.transaction_type === "installment_paid" ? (
+            <Field label="Installment for">
+              {t.installment_month
+                ? `${INSTALLMENT_MONTHS[t.installment_month - 1]} ${t.installment_year ?? ""}`
+                : "— (unassigned)"}
+            </Field>
+          ) : null}
           <Field label="Account">{t.account_name ?? "—"}</Field>
           <Field label="To account">{t.to_account_name ?? "—"}</Field>
           <Field label="Member">{t.member_name ?? "—"}</Field>

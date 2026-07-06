@@ -20,6 +20,8 @@ export type Transaction = {
   note: string | null;
   payment_method: PaymentMethod | null;
   status: TransactionStatus;
+  installment_month: number | null;
+  installment_year: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

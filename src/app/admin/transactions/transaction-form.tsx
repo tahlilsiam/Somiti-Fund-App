@@ -34,6 +34,11 @@ import {
 import type { AccountOption, MemberOption } from "@/lib/transactions/queries";
 import type { Transaction } from "@/lib/transactions/types";
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
@@ -82,6 +87,12 @@ export function TransactionForm({
   const isEither = expected === "either";
   const direction = isEither ? adjDir : expected;
   const showMember = memberAllowed(type);
+  const isInstallment = type === "installment_paid";
+
+  const monthItems = MONTHS.reduce<Record<string, string>>((acc, m, i) => {
+    acc[String(i + 1)] = m;
+    return acc;
+  }, {});
 
   const typeItems = useMemo(
     () =>
@@ -279,13 +290,19 @@ export function TransactionForm({
 
         {showMember ? (
           <div className="space-y-2">
-            <Label htmlFor="member-trigger">Member (optional)</Label>
+            <Label htmlFor="member-trigger">
+              Member {isInstallment ? "*" : "(optional)"}
+            </Label>
             <Select
               name="member_id"
               items={memberItems}
               defaultValue={initial?.member_id ?? ""}
             >
-              <SelectTrigger id="member-trigger" className="w-full">
+              <SelectTrigger
+                id="member-trigger"
+                className="w-full"
+                aria-invalid={e.member_id ? true : undefined}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -299,6 +316,58 @@ export function TransactionForm({
             </Select>
             <FieldError message={e.member_id} />
           </div>
+        ) : null}
+
+        {isInstallment ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="inst-month-trigger">Installment month *</Label>
+              <Select
+                name="installment_month"
+                items={{ "": "— Select —", ...monthItems }}
+                defaultValue={
+                  initial?.installment_month
+                    ? String(initial.installment_month)
+                    : ""
+                }
+              >
+                <SelectTrigger
+                  id="inst-month-trigger"
+                  className="w-full"
+                  aria-invalid={e.installment_month ? true : undefined}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">— Select —</SelectItem>
+                  {MONTHS.map((m, i) => (
+                    <SelectItem key={m} value={String(i + 1)}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError message={e.installment_month} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="installment_year">Installment year *</Label>
+              <Input
+                id="installment_year"
+                name="installment_year"
+                type="number"
+                min="2000"
+                max="2100"
+                placeholder="e.g. 2026"
+                defaultValue={
+                  initial?.installment_year
+                    ? String(initial.installment_year)
+                    : ""
+                }
+                aria-invalid={e.installment_year ? true : undefined}
+              />
+              <FieldError message={e.installment_year} />
+            </div>
+          </>
         ) : null}
 
         <div className="space-y-2">

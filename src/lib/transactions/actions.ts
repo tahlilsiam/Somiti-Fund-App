@@ -40,6 +40,8 @@ export async function createTransaction(
     payment_method: formData.get("payment_method"),
     reference_number: formData.get("reference_number"),
     note: formData.get("note"),
+    installment_month: formData.get("installment_month"),
+    installment_year: formData.get("installment_year"),
   });
 
   if (!parsed.success) {
@@ -56,6 +58,7 @@ export async function createTransaction(
 
   // Members may only be attached to specific transaction types.
   const memberId = memberAllowed(type) ? (d.member_id ?? null) : null;
+  const isInstallment = type === "installment_paid";
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -71,6 +74,8 @@ export async function createTransaction(
       reference_number: d.reference_number ?? null,
       note: d.note ?? null,
       transaction_date: d.transaction_date,
+      installment_month: isInstallment ? (d.installment_month ?? null) : null,
+      installment_year: isInstallment ? (d.installment_year ?? null) : null,
       status: "approved", // manual admin entries are official immediately
       created_by: session.userId,
     })
@@ -113,6 +118,8 @@ const AUDITED_FIELDS = [
   "reference_number",
   "note",
   "transaction_date",
+  "installment_month",
+  "installment_year",
   "status",
 ] as const;
 
@@ -142,6 +149,8 @@ export async function updateTransaction(
     payment_method: formData.get("payment_method"),
     reference_number: formData.get("reference_number"),
     note: formData.get("note"),
+    installment_month: formData.get("installment_month"),
+    installment_year: formData.get("installment_year"),
   });
   if (!parsed.success) {
     return {
@@ -164,6 +173,7 @@ export async function updateTransaction(
   const isTransfer = d.direction === "transfer";
   const type = d.transaction_type as TransactionType;
   const memberId = memberAllowed(type) ? (d.member_id ?? null) : null;
+  const isInstallment = type === "installment_paid";
 
   const supabase = createAdminClient();
 
@@ -189,6 +199,8 @@ export async function updateTransaction(
     reference_number: d.reference_number ?? null,
     note: d.note ?? null,
     transaction_date: d.transaction_date,
+    installment_month: isInstallment ? (d.installment_month ?? null) : null,
+    installment_year: isInstallment ? (d.installment_year ?? null) : null,
   };
 
   const { error } = await supabase

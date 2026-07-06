@@ -55,9 +55,59 @@ export const transactionSchema = z
       ),
     reference_number: optionalText,
     note: optionalText,
+    installment_month: z
+      .string()
+      .nullish()
+      .transform((v) => {
+        const s = (v ?? "").trim();
+        return s === "" ? undefined : Number(s);
+      }),
+    installment_year: z
+      .string()
+      .nullish()
+      .transform((v) => {
+        const s = (v ?? "").trim();
+        return s === "" ? undefined : Number(s);
+      }),
   })
   .superRefine((data, ctx) => {
     const expected = TYPE_DIRECTION[data.transaction_type as TransactionType];
+
+    // Installment transactions must be attributed to a member and a month/year
+    // so they count in installment tracking (no "unassigned" via the UI).
+    if (data.transaction_type === "installment_paid") {
+      if (!data.member_id) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["member_id"],
+          message: "Select the member for this installment.",
+        });
+      }
+      if (
+        data.installment_month === undefined ||
+        Number.isNaN(data.installment_month) ||
+        data.installment_month < 1 ||
+        data.installment_month > 12
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["installment_month"],
+          message: "Select the installment month.",
+        });
+      }
+      if (
+        data.installment_year === undefined ||
+        Number.isNaN(data.installment_year) ||
+        data.installment_year < 2000 ||
+        data.installment_year > 2100
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["installment_year"],
+          message: "Enter the installment year.",
+        });
+      }
+    }
 
     // Direction must be consistent with the transaction type.
     if (expected === "either") {
