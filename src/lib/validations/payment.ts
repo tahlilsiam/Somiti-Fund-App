@@ -23,6 +23,16 @@ export const allocationItemSchema = z
       .finite(),
     installment_month: z.coerce.number().int().min(1).max(12).nullish(),
     installment_year: z.coerce.number().int().min(2000).max(2100).nullish(),
+    loan_id: z
+      .string()
+      .nullish()
+      .transform((v) => {
+        const s = (v ?? "").trim();
+        return s === "" ? undefined : s;
+      })
+      .refine((v) => v === undefined || z.uuid().safeParse(v).success, {
+        message: "Select a valid loan.",
+      }),
     note: optionalText,
   })
   .superRefine((data, ctx) => {
@@ -41,6 +51,13 @@ export const allocationItemSchema = z
           message: "Enter the installment year.",
         });
       }
+    }
+    if (data.item_type === "loan_repayment" && !data.loan_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["loan_id"],
+        message: "Select the loan to repay.",
+      });
     }
   });
 

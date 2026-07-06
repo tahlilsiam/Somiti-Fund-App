@@ -8,6 +8,7 @@ import { getCurrentSession } from "@/lib/auth";
 import { getMemberByProfileId } from "@/lib/members/queries";
 import { getMyPayment } from "@/lib/payments/queries";
 import { listActiveAccounts } from "@/lib/accounts/queries";
+import { listRunningLoansForMember } from "@/lib/loans/queries";
 import { PaymentForm } from "../../payment-form";
 
 export default async function EditPaymentPage({
@@ -23,7 +24,10 @@ export default async function EditPaymentPage({
   const payment = await getMyPayment(member.id, id);
   if (!payment) notFound();
 
-  const accounts = await listActiveAccounts();
+  const [accounts, runningLoans] = await Promise.all([
+    listActiveAccounts(),
+    listRunningLoansForMember(member.id),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -52,6 +56,7 @@ export default async function EditPaymentPage({
         <PaymentForm
           accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
           today={today}
+          runningLoans={runningLoans}
           mode="resubmit"
           initial={payment}
         />

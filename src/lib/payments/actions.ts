@@ -9,13 +9,6 @@ import {
   paymentSubmissionSchema,
   type PaymentSubmissionInput,
 } from "@/lib/validations/payment";
-import {
-  ALLOWED_PROOF_EXT,
-  ALLOWED_PROOF_MIME,
-  MAX_PROOF_BYTES,
-  PROOF_REQUIRED_METHODS,
-} from "./constants";
-import { removeProof, uploadProof } from "./storage";
 import type { Member } from "@/lib/members/types";
 import type { PaymentMethod } from "@/lib/transactions/constants";
 import type { Session } from "@/lib/auth";
@@ -49,16 +42,6 @@ async function resolveMyMember(): Promise<
     };
   }
   return { member, session };
-}
-
-function validateProofFile(file: File): string | null {
-  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
-  const okType =
-    (ALLOWED_PROOF_MIME as readonly string[]).includes(file.type) ||
-    (ALLOWED_PROOF_EXT as readonly string[]).includes(ext);
-  if (!okType) return "Only JPG, PNG or PDF files are allowed.";
-  if (file.size > MAX_PROOF_BYTES) return "File must be 5 MB or smaller.";
-  return null;
 }
 
 async function isDuplicateReference(
@@ -104,13 +87,14 @@ function itemRows(
 ) {
   return items.map((i) => {
     const isInstallment = i.item_type === "installment_paid";
+    const isLoan = i.item_type === "loan_repayment";
     return {
       payment_submission_id: submissionId,
       item_type: i.item_type,
       amount: i.amount,
       installment_month: isInstallment ? (i.installment_month ?? null) : null,
       installment_year: isInstallment ? (i.installment_year ?? null) : null,
-      loan_id: null,
+      loan_id: isLoan ? (i.loan_id ?? null) : null,
       direction: "in" as const,
       note: i.note ?? null,
     };
@@ -137,20 +121,6 @@ export async function submitPayment(
   }
   const d = parsed.data;
 
-  const raw = formData.get("proof");
-  const file = raw instanceof File && raw.size > 0 ? raw : null;
-  if (!file && PROOF_REQUIRED_METHODS.includes(d.method)) {
-    return {
-      ok: false,
-      error: "A payment proof is required for this payment method.",
-      fieldErrors: { proof: "Proof is required for bank/mobile/cheque payments." },
-    };
-  }
-  if (file) {
-    const fileErr = validateProofFile(file);
-    if (fileErr) return { ok: false, error: fileErr, fieldErrors: { proof: fileErr } };
-  }
-
   const supabase = createAdminClient();
   if (
     d.reference_number &&
@@ -161,15 +131,6 @@ export async function submitPayment(
       error: "This reference number is already used for this account and method.",
       fieldErrors: { reference_number: "Duplicate reference number." },
     };
-  }
-
-  let proofPath: string | null = null;
-  if (file) {
-    try {
-      proofPath = await uploadProof(member.id, file);
-    } catch (err) {
-      return { ok: false, error: (err as Error).message };
-    }
   }
 
   const { data: inserted, error } = await supabase
@@ -183,14 +144,12 @@ export async function submitPayment(
       payment_date: d.payment_date,
       reference_number: d.reference_number ?? null,
       note: d.note ?? null,
-      proof_url: proofPath,
       status: "pending",
     })
     .select("id")
     .single();
 
   if (error) {
-    if (proofPath) await removeProof(proofPath);
     return { ok: false, error: error.message };
   }
   const submissionId = inserted.id as string;
@@ -200,7 +159,6 @@ export async function submitPayment(
     .insert(itemRows(submissionId, d.items));
   if (itemsError) {
     await supabase.from("payment_submissions").delete().eq("id", submissionId);
-    if (proofPath) await removeProof(proofPath);
     return { ok: false, error: itemsError.message };
   }
 
@@ -256,21 +214,6 @@ export async function resubmitPayment(
     };
   }
 
-  const raw = formData.get("proof");
-  const file = raw instanceof File && raw.size > 0 ? raw : null;
-  if (file) {
-    const fileErr = validateProofFile(file);
-    if (fileErr) return { ok: false, error: fileErr, fieldErrors: { proof: fileErr } };
-  }
-  const hasProof = Boolean(file) || Boolean(existing.proof_url);
-  if (!hasProof && PROOF_REQUIRED_METHODS.includes(d.method)) {
-    return {
-      ok: false,
-      error: "A payment proof is required for this payment method.",
-      fieldErrors: { proof: "Proof is required for bank/mobile/cheque payments." },
-    };
-  }
-
   if (
     d.reference_number &&
     (await isDuplicateReference(supabase, d.account_id, d.method, d.reference_number, id))
@@ -282,17 +225,6 @@ export async function resubmitPayment(
     };
   }
 
-  let proofPath: string | null = existing.proof_url ?? null;
-  if (file) {
-    try {
-      const newPath = await uploadProof(member.id, file);
-      if (existing.proof_url) await removeProof(existing.proof_url);
-      proofPath = newPath;
-    } catch (err) {
-      return { ok: false, error: (err as Error).message };
-    }
-  }
-
   const { error } = await supabase
     .from("payment_submissions")
     .update({
@@ -302,7 +234,6 @@ export async function resubmitPayment(
       payment_date: d.payment_date,
       reference_number: d.reference_number ?? null,
       note: d.note ?? null,
-      proof_url: proofPath,
       status: "pending",
       review_note: null,
     })

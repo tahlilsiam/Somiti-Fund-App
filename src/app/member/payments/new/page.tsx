@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { getCurrentSession } from "@/lib/auth";
 import { getMemberByProfileId } from "@/lib/members/queries";
 import { listActiveAccounts } from "@/lib/accounts/queries";
+import { listRunningLoansForMember } from "@/lib/loans/queries";
 import { PaymentForm } from "../payment-form";
 
 export default async function NewPaymentPage() {
@@ -25,7 +26,10 @@ export default async function NewPaymentPage() {
     );
   }
 
-  const accounts = await listActiveAccounts();
+  const [accounts, runningLoans] = await Promise.all([
+    listActiveAccounts(),
+    listRunningLoansForMember(member.id),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -52,6 +56,7 @@ export default async function NewPaymentPage() {
         <PaymentForm
           accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
           today={today}
+          runningLoans={runningLoans}
           mode="new"
         />
       )}

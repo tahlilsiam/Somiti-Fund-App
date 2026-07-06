@@ -4,7 +4,6 @@ import { SectionCard } from "@/components/section-card";
 import { SubmissionStatusBadge } from "@/components/submission-status-badge";
 import { AllocationLines } from "@/components/allocation-lines";
 import { getPaymentSubmission } from "@/lib/payments/queries";
-import { getProofSignedUrl } from "@/lib/payments/storage";
 import { formatAmount } from "@/lib/format";
 import { PAYMENT_METHOD_LABELS } from "@/lib/transactions/constants";
 import { ReviewActions } from "./review-actions";
@@ -29,9 +28,6 @@ export default async function ReviewPaymentPage({
   const payment = await getPaymentSubmission(id);
   if (!payment) notFound();
 
-  const proofUrl = payment.proof_url
-    ? await getProofSignedUrl(payment.proof_url)
-    : null;
   const itemStatuses = payment.itemStatuses;
   const hasVoided = Object.values(itemStatuses).includes("void");
 
@@ -70,20 +66,6 @@ export default async function ReviewPaymentPage({
           </Field>
           <Field label="Submitted">{payment.created_at.slice(0, 10)}</Field>
           <Field label="Note">{payment.note ?? "—"}</Field>
-          <Field label="Proof">
-            {proofUrl ? (
-              <a
-                href={proofUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline underline-offset-4"
-              >
-                View proof
-              </a>
-            ) : (
-              "—"
-            )}
-          </Field>
         </dl>
       </SectionCard>
 

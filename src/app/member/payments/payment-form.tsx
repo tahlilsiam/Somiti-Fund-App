@@ -24,7 +24,6 @@ import {
 import {
   MEMBER_PAYMENT_TYPES,
   PAYMENT_TYPE_LABELS,
-  PROOF_REQUIRED_METHODS,
   type MemberPaymentType,
 } from "@/lib/payments/constants";
 import {
@@ -34,6 +33,7 @@ import {
 } from "@/lib/transactions/constants";
 import { formatAmount } from "@/lib/format";
 import type { PaymentSubmissionRow } from "@/lib/payments/types";
+import type { RunningLoanOption } from "@/lib/loans/types";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -46,6 +46,7 @@ type Row = {
   amount: string;
   month: string;
   year: string;
+  loan_id: string;
   note: string;
 };
 
@@ -69,6 +70,7 @@ function buildInitialRows(
       amount: String(it.amount),
       month: it.installment_month ? String(it.installment_month) : "",
       year: it.installment_year ? String(it.installment_year) : "",
+      loan_id: it.loan_id ?? "",
       note: it.note ?? "",
     }));
   }
@@ -79,6 +81,7 @@ function buildInitialRows(
       amount: "",
       month: "",
       year: today.slice(0, 4),
+      loan_id: "",
       note: "",
     },
   ];
@@ -87,11 +90,13 @@ function buildInitialRows(
 export function PaymentForm({
   accounts,
   today,
+  runningLoans = [],
   mode = "new",
   initial,
 }: {
   accounts: { id: string; name: string }[];
   today: string;
+  runningLoans?: RunningLoanOption[];
   mode?: "new" | "resubmit";
   initial?: PaymentSubmissionRow;
 }) {
@@ -111,16 +116,37 @@ export function PaymentForm({
   const [rows, setRows] = useState<Row[]>(() => buildInitialRows(initial, today));
   const nextKey = useRef(rows.length);
 
-  const proofRequired = PROOF_REQUIRED_METHODS.includes(method);
+  const hasLoans = runningLoans.length > 0;
+  const loanMap = useMemo(
+    () => new Map(runningLoans.map((l) => [l.id, l])),
+    [runningLoans],
+  );
+
+  // Loan repayment is only offered when the member has a running loan.
+  const availableTypes = hasLoans
+    ? MEMBER_PAYMENT_TYPES
+    : MEMBER_PAYMENT_TYPES.filter((t) => t !== "loan_repayment");
 
   const typeItems = Object.fromEntries(
-    MEMBER_PAYMENT_TYPES.map((t) => [t, PAYMENT_TYPE_LABELS[t]]),
+    availableTypes.map((t) => [t, PAYMENT_TYPE_LABELS[t]]),
   );
   const methodItems = Object.fromEntries(
     PAYMENT_METHODS.map((m) => [m, PAYMENT_METHOD_LABELS[m]]),
   );
   const accountItems = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
   const monthItems = Object.fromEntries(MONTHS.map((m, i) => [String(i + 1), m]));
+  const loanItems = Object.fromEntries(runningLoans.map((l) => [l.id, l.label]));
+
+  function loanRowError(r: Row): string | null {
+    if (r.item_type !== "loan_repayment") return null;
+    if (!r.loan_id) return "Select the loan to repay.";
+    const loan = loanMap.get(r.loan_id);
+    const amt = Number.parseFloat(r.amount) || 0;
+    if (loan && amt > loan.remaining + 0.005) {
+      return `Exceeds remaining due (${formatAmount(loan.remaining)}).`;
+    }
+    return null;
+  }
 
   const totalPaid = Number.parseFloat(amount) || 0;
   const allocated = rows.reduce(
@@ -128,8 +154,12 @@ export function PaymentForm({
     0,
   );
   const remaining = totalPaid - allocated;
+  const hasLoanIssue = rows.some((r) => loanRowError(r) !== null);
   const balanced =
-    Math.abs(remaining) < 0.005 && totalPaid > 0 && rows.length > 0;
+    Math.abs(remaining) < 0.005 &&
+    totalPaid > 0 &&
+    rows.length > 0 &&
+    !hasLoanIssue;
 
   const itemsJson = useMemo(
     () =>
@@ -143,6 +173,7 @@ export function PaymentForm({
               : null,
           installment_year:
             r.item_type === "installment_paid" && r.year ? Number(r.year) : null,
+          loan_id: r.item_type === "loan_repayment" ? r.loan_id || null : null,
           note: r.note || null,
         })),
       ),
@@ -161,6 +192,7 @@ export function PaymentForm({
         amount: "",
         month: "",
         year: today.slice(0, 4),
+        loan_id: "",
         note: "",
       },
     ]);
@@ -312,7 +344,7 @@ export function PaymentForm({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {MEMBER_PAYMENT_TYPES.map((t) => (
+                      {availableTypes.map((t) => (
                         <SelectItem key={t} value={t}>
                           {PAYMENT_TYPE_LABELS[t]}
                         </SelectItem>
@@ -377,10 +409,32 @@ export function PaymentForm({
                 ) : null}
 
                 {r.item_type === "loan_repayment" ? (
-                  <p className="text-muted-foreground self-end text-xs sm:col-span-2">
-                    Loan selection &amp; remaining-balance display arrive in
-                    Phase 7. For now this records a general loan repayment.
-                  </p>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label className="text-xs">Loan to repay</Label>
+                    <Select
+                      value={r.loan_id}
+                      items={{ "": "— Select loan —", ...loanItems }}
+                      onValueChange={(v) =>
+                        updateRow(r.key, { loan_id: String(v) })
+                      }
+                    >
+                      <SelectTrigger
+                        className="w-full"
+                        aria-invalid={loanRowError(r) ? true : undefined}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Select loan —</SelectItem>
+                        {runningLoans.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError message={loanRowError(r) ?? undefined} />
+                  </div>
                 ) : null}
 
                 <div className="space-y-1">
@@ -443,26 +497,6 @@ export function PaymentForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="proof">
-          Payment proof {proofRequired ? "*" : "(optional)"}
-        </Label>
-        <Input
-          id="proof"
-          name="proof"
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-          aria-invalid={e.proof ? true : undefined}
-        />
-        <p className="text-muted-foreground text-xs">
-          JPG, PNG or PDF, up to 5 MB.
-          {proofRequired ? " Required for this payment method." : ""}
-          {mode === "resubmit" && initial?.proof_url
-            ? " Leave empty to keep your existing proof."
-            : ""}
-        </p>
-        <FieldError message={e.proof} />
-      </div>
 
       <div className="space-y-2">
         <Label htmlFor="note">Overall note</Label>

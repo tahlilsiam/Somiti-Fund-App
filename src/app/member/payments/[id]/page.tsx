@@ -8,7 +8,6 @@ import { AllocationLines } from "@/components/allocation-lines";
 import { getCurrentSession } from "@/lib/auth";
 import { getMemberByProfileId } from "@/lib/members/queries";
 import { getMyPayment } from "@/lib/payments/queries";
-import { getProofSignedUrl } from "@/lib/payments/storage";
 import { formatAmount } from "@/lib/format";
 import { PAYMENT_METHOD_LABELS } from "@/lib/transactions/constants";
 
@@ -36,9 +35,6 @@ export default async function MemberPaymentDetailPage({
   const payment = await getMyPayment(member.id, id);
   if (!payment) notFound();
 
-  const proofUrl = payment.proof_url
-    ? await getProofSignedUrl(payment.proof_url)
-    : null;
   const itemStatuses = payment.itemStatuses;
   const hasVoided = Object.values(itemStatuses).includes("void");
 
@@ -85,20 +81,6 @@ export default async function MemberPaymentDetailPage({
           </Field>
           <Field label="Submitted">{payment.created_at.slice(0, 10)}</Field>
           <Field label="Note">{payment.note ?? "—"}</Field>
-          <Field label="Proof">
-            {proofUrl ? (
-              <a
-                href={proofUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline underline-offset-4"
-              >
-                View proof
-              </a>
-            ) : (
-              "—"
-            )}
-          </Field>
         </dl>
       </SectionCard>
 

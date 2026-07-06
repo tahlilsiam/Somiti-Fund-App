@@ -260,6 +260,35 @@ export async function voidTransaction(id: string, reason: string) {
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
 
+  // If this transaction was tied to a loan (repayment or disbursement),
+  // recompute the loan's status so a voided repayment can re-open a cleared loan.
+  if (existing.loan_id) {
+    const { data: loan } = await supabase
+      .from("loans")
+      .select("id, principal_amount, status")
+      .eq("id", existing.loan_id)
+      .maybeSingle();
+    if (loan) {
+      const { data: repays } = await supabase
+        .from("transactions")
+        .select("amount")
+        .eq("loan_id", existing.loan_id)
+        .eq("transaction_type", "loan_repayment")
+        .eq("status", "approved");
+      const repaid = (repays ?? []).reduce((s, t) => s + Number(t.amount), 0);
+      const remaining = Number(loan.principal_amount) - repaid;
+      const nextStatus = remaining <= 0.005 ? "cleared" : "running";
+      if (nextStatus !== loan.status) {
+        await supabase
+          .from("loans")
+          .update({ status: nextStatus })
+          .eq("id", existing.loan_id);
+      }
+    }
+    revalidatePath("/admin/loans");
+    revalidatePath(`/admin/loans/${existing.loan_id}`);
+  }
+
   await logAudit(supabase, {
     actorId: session.userId,
     action: "void",
