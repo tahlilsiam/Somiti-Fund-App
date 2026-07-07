@@ -148,7 +148,7 @@ export function AppSidebar({
   role: Role;
 }) {
   return (
-    <aside className="bg-sidebar hidden md:sticky md:top-0 md:flex md:h-svh md:w-64 md:flex-col md:border-r">
+    <aside className="bg-sidebar hidden md:sticky md:top-0 md:flex md:h-svh md:w-64 md:flex-col md:border-r print:md:hidden">
       <SidebarInner items={navByVariant[variant]} name={name} role={role} />
     </aside>
   );
@@ -168,7 +168,7 @@ export function MobileNav({
   const items = navByVariant[variant];
   const area = areaByVariant[variant];
   return (
-    <header className="bg-sidebar sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden">
+    <header className="bg-sidebar sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden print:hidden">
       <div className="flex items-center gap-2">
         <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
           <Landmark className="size-4" />

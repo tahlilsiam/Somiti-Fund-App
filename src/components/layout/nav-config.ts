@@ -35,7 +35,7 @@ export const adminNav: NavItem[] = [
   },
   { label: "Installments", href: "/admin/installments", icon: CalendarCheck },
   { label: "Loans / Dues", href: "/admin/loans", icon: HandCoins },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3, soon: true },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings, soon: true },
 ];
 
@@ -45,5 +45,5 @@ export const memberNav: NavItem[] = [
   { label: "My Payments", href: "/member/payments", icon: CreditCard },
   { label: "My Installments", href: "/member/installments", icon: CalendarCheck },
   { label: "My Loans / Dues", href: "/member/loans", icon: HandCoins },
-  { label: "My Statement", href: "/member/statement", icon: FileText, soon: true },
+  { label: "My Statement", href: "/member/statement", icon: FileText },
 ];
